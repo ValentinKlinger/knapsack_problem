@@ -70,13 +70,14 @@ def greedy_algorithm(situation):
 
     ratio = []
     for i in range(situation.n_var):
-        ratio.append((situation.P[i] / situation.W[i], situation.P[i], situation.W[i]))
+        ratio.append((situation.P[i] / situation.W[i], i))
 
     ratio.sort(reverse=True)
 
     for i in range(situation.n_var):
-        if ratio[i][2] >= c:
-            knapsack_obj_total_value += ratio[i][1]
-            list_of_obj_in_knapsack[i] = 1
+        if situation.W[ratio[i][1]] <= c:
+            knapsack_obj_total_value += situation.P[ratio[i][1]]
+            list_of_obj_in_knapsack[ratio[i][1]] = 1
+            c -= situation.W[ratio[i][1]]
 
     return knapsack_obj_total_value, list_of_obj_in_knapsack
