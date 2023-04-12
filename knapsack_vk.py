@@ -61,3 +61,22 @@ def bruteforce(situation, best=0, money=0, objets=[], final_lst=[0], len_total_p
             best, final_lst = recurence
 
     return best, final_lst
+
+
+def greedy_algorithm(situation):
+    list_of_obj_in_knapsack = [0] * situation.n_var
+    knapsack_obj_total_value = 0
+    c = situation.C
+
+    ratio = []
+    for i in range(situation.n_var):
+        ratio.append((situation.P[i] / situation.W[i], situation.P[i], situation.W[i]))
+
+    ratio.sort(reverse=True)
+
+    for i in range(situation.n_var):
+        if ratio[i][2] >= c:
+            knapsack_obj_total_value += ratio[i][1]
+            list_of_obj_in_knapsack[i] = 1
+
+    return knapsack_obj_total_value, list_of_obj_in_knapsack
