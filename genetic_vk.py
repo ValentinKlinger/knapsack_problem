@@ -1,9 +1,15 @@
 import numpy as np
 import random
-import pymoo.problems.single.knapsack
+import knapsack_class
+from math import ceil
 
 
-def fitness_coefficient(individual, values, weights, capacity):
+def fitness_coefficient(
+    individual: np.ndarray[float],
+    values: np.ndarray[float],
+    weights: np.ndarray[float],
+    capacity: np.int64,
+) -> tuple[int, np.ndarray[float]]:
     """
     Return the fitness coefficent of a individual.
     If his wheight is superior of the capacity, fitness_coefficient = 0.
@@ -22,24 +28,29 @@ def two_point_crossover(parents, mutation_rate):
     Retourn 2 individuals who are the two point crossover of their parents
     """
     if len(parents[0]) == 1:
-        if random.random() < 0.015:
-            return mutation(parents)
+        if random.random() < mutation_rate:
+            return mutation(parents, mutation_rate)
         return parents
 
     if len(parents[0]) == 2:
-        if random.random() < 0.015:
+        parent1 = np.expand_dims(parents[0][0], axis=0)
+        parent2 = np.expand_dims(parents[1][1], axis=0)
+        parent3 = np.expand_dims(parents[1][0], axis=0)
+        parent4 = np.expand_dims(parents[0][1], axis=0)
+        if random.random() < mutation_rate:
             return mutation(
                 np.array(
                     [
-                        np.concatenate((parents[0][0], parents[1][1])),
-                        np.concatenate((parents[1][0], parents[0][1])),
+                        np.concatenate((parent1, parent2)),
+                        np.concatenate((parent3, parent4)),
                     ]
-                )
+                ),
+                mutation_rate,
             )
         return np.array(
             [
-                np.concatenate((parents[0][0], parents[1][1])),
-                np.concatenate((parents[1][0], parents[0][1])),
+                np.concatenate((parent1, parent2)),
+                np.concatenate((parent3, parent4)),
             ]
         )
     if random.random() < mutation_rate:
@@ -121,9 +132,7 @@ def natural_selection(population, NUM_FIGHTERS):
     """
     Return a array of NUM_FIGHTERS individuals from population
     """
-    fighters_location = np.random.choice(
-        population.shape[0], size=NUM_FIGHTERS, replace=False
-    )
+    fighters_location = np.random.choice(population.shape[0], size=NUM_FIGHTERS)
 
     fighters = population[fighters_location, :]
     return fighters
@@ -156,114 +165,89 @@ def tournament(NUM_FIGHTERS, fighters, values, weights, capacity):
 
 def genetic_algorithm(problem):
     """
-    Genetic_algorithm V2.
-    In this version, I incrase the number of participants in the turnament.
-    I used two pairs, one created by tournaments and
-    the other created by the best individual and the winner of a tournament.
+    Genetic_algorithm V3.
+    in this version, there are more parents, everyone takes part in the tournaments,
+    we keep the results of the last 5 populations to find the best one.
     """
-    # Population with N individuals.
-    N = 250  # Have to be even.
-    NUM_OF_GENERATION = 500
 
-    # Creation of the first population.
+    NUM_INDIVIDUALS = 20 + 4 * problem.n_var
+    NUM_OF_GENERATION = 20 + 4 * problem.n_var
+
     average_weights = sum(problem.W)
     capacity_on_arevage = problem.C / average_weights
 
-    population = np.zeros((N, problem.n_var), dtype=int)
-    for individual in range(N):
+    population = np.zeros((NUM_INDIVIDUALS, problem.n_var), dtype=int)
+    for individual in range(NUM_INDIVIDUALS):
         for chromosome in range(problem.n_var):
             if random.random() < capacity_on_arevage:
                 population[individual, chromosome] = 1
 
     # Genetic process.
-    NUM_FIGHTERS = 32
-    NUM_FIGHTERS_2 = 32
+    num_mates = ceil(NUM_INDIVIDUALS / 4)
+    num_even_children_by_parents = ceil(NUM_INDIVIDUALS / (2 * num_mates))
 
+    LEN_TOURNAMENT = 4
+
+    NUM_INDIVIDUALS = 2 * num_mates * num_even_children_by_parents
+
+    population_last_5g = np.empty((1, problem.n_var))
     for i in range(NUM_OF_GENERATION):
-        fighters = natural_selection(population, NUM_FIGHTERS + NUM_FIGHTERS_2)
+        mates = np.zeros((num_mates, 2, problem.n_var))
 
-        best_solution = (0, np.zeros((problem.n_var), dtype=int))
-        for individual in population:
-            if (
-                fitness_coefficient(individual, problem.P, problem.W, problem.C)[0]
-                > best_solution[0]
-            ):
-                best_solution = fitness_coefficient(
-                    individual, problem.P, problem.W, problem.C
-                )
-        # Parents 1
+        for mate in range(num_mates):
+            fighters = natural_selection(population, LEN_TOURNAMENT)
+            mates[mate] = tournament(
+                LEN_TOURNAMENT,
+                fighters,
+                problem.P,
+                problem.W,
+                problem.C,
+            )
 
-        parents_1 = tournament(
-            NUM_FIGHTERS, fighters[:32], problem.P, problem.W, problem.C
-        )
-
-        # Parents 2
-        parents_2_tournament_results = tournament(
-            NUM_FIGHTERS_2, fighters[32:], problem.P, problem.W, problem.C
-        )
-        if (
-            fitness_coefficient(
-                parents_2_tournament_results[0], problem.P, problem.W, problem.C
-            )[0]
-            > fitness_coefficient(
-                parents_2_tournament_results[1], problem.P, problem.W, problem.C
-            )[0]
-        ):
-            winer = parents_2_tournament_results[0]
-        else:
-            winer = parents_2_tournament_results[1]
-
-        parents_2 = np.vstack((best_solution[1], winer))
-
-        population = None
+        a = 0
+        population = np.zeros((NUM_INDIVIDUALS, problem.n_var))
         CROSSOVER_RATE = 0.6
         REPRODUCTION_RATE = 0.385
         MUTATION_RATE = 0.015
-        while population is None or len(population) < N:
-            random_action = random.random()
 
-            if random.randint(0, 1) == 0:
-                parents = parents_1
-            else:
-                parents = parents_2
-
-            if random_action < CROSSOVER_RATE:
-                if population is None:
-                    population = two_point_crossover(parents, MUTATION_RATE)
-                else:
-                    population = np.vstack(
-                        (population, two_point_crossover(parents, MUTATION_RATE))
+        counter = 0
+        for parents in mates:
+            for _ in range(num_even_children_by_parents):
+                random_action = random.random()
+                if random_action < CROSSOVER_RATE:
+                    population[counter], population[counter + 1] = two_point_crossover(
+                        parents, MUTATION_RATE
                     )
 
-            elif random_action < CROSSOVER_RATE + REPRODUCTION_RATE:
-                if population is None:
-                    population = parents
-                else:
-                    population = np.vstack((population, parents))
+                elif random_action < CROSSOVER_RATE + REPRODUCTION_RATE:
+                    population[counter], population[counter + 1] = parents
 
-            else:
-                if population is None:
-                    population = mutation(parents, MUTATION_RATE)
                 else:
-                    population = np.vstack(
-                        (population, mutation(parents, MUTATION_RATE))
+                    population[counter], population[counter + 1] = mutation(
+                        parents, MUTATION_RATE
                     )
+
+                counter += 2
+        if i >= NUM_OF_GENERATION - 5:
+            population_last_5g = np.concatenate(
+                (population_last_5g, population),
+            )
 
     # Find the best of the latest generation.
     out = (0, [0] * problem.n_var)
-    for individual in range(N):
+    for individual in range(NUM_INDIVIDUALS * 3):
         if (
             fitness_coefficient(
-                population[individual], problem.P, problem.W, problem.C
+                population_last_5g[individual], problem.P, problem.W, problem.C
             )[0]
             > out[0]
         ):
             out = fitness_coefficient(
-                population[individual], problem.P, problem.W, problem.C
+                population_last_5g[individual], problem.P, problem.W, problem.C
             )
 
     return out
 
 
-# problem = pymoo.problems.single.knapsack.create_random_knapsack_problem(25)
-# print(genetic_algorithm(problem))
+problem = knapsack_class.random_problem(21)
+print(genetic_algorithm(problem))
