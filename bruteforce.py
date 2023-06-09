@@ -1,11 +1,11 @@
 # bruteforce methode for the knapsack problem by recurrence
 
-import pymoo.problems.single.knapsack
+import knapsack_class
 import numpy as np
 
 
 def bruteforce(situation, best=0, money=0, objets=[], final_lst=[0], len_total_plm=0):
-    problem = pymoo.problems.single.knapsack.Knapsack(
+    problem = knapsack_class.Knapsack(
         len(situation.W), situation.W, situation.P, situation.C
     )
     if len_total_plm == 0:
@@ -30,9 +30,7 @@ def bruteforce(situation, best=0, money=0, objets=[], final_lst=[0], len_total_p
         problem.P = np.delete(problem.P, 0)
 
         recurence = bruteforce(
-            pymoo.problems.single.knapsack.Knapsack(
-                len(problem.W), problem.W, problem.P, c
-            ),
+            knapsack_class.Knapsack(len(problem.W), problem.W, problem.P, c),
             best,
             m,
             obj,
@@ -47,7 +45,7 @@ def bruteforce(situation, best=0, money=0, objets=[], final_lst=[0], len_total_p
 
 # print(
 #     bruteforce(
-#         pymoo.problems.single.knapsack.Knapsack(
+#         knapsack_class.Knapsack(
 #             4, np.array([5, 8, 7, 3]), np.array([3, 6, 2, 4]), 10
 #         )
 #     )

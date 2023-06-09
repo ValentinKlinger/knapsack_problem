@@ -7,6 +7,7 @@ from pymoo.operators.sampling.rnd import BinaryRandomSampling
 from pymoo.optimize import minimize
 import pymoo.problems.single.knapsack
 import numpy as np
+import knapsack_class
 
 
 def knapsack_pymoo(problem):
@@ -23,7 +24,7 @@ def knapsack_pymoo(problem):
 
 
 def bruteforce(situation, best=0, money=0, objets=[], final_lst=[0], len_total_plm=0):
-    problem = pymoo.problems.single.knapsack.Knapsack(
+    problem = knapsack_class.Knapsack(
         len(situation.W), situation.W, situation.P, situation.C
     )
     if len_total_plm == 0:
@@ -48,9 +49,7 @@ def bruteforce(situation, best=0, money=0, objets=[], final_lst=[0], len_total_p
         problem.P = np.delete(problem.P, 0)
 
         recurence = bruteforce(
-            pymoo.problems.single.knapsack.Knapsack(
-                len(problem.W), problem.W, problem.P, c
-            ),
+            knapsack_class.Knapsack(len(problem.W), problem.W, problem.P, c),
             best,
             m,
             obj,
