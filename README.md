@@ -1,7 +1,7 @@
 # knapsack_problem
 
 Here is a study about the Knapsack Problem.
-I implement different algorithms to solve this problem and I analyse their limits.
+I've implemented different algorithms, including a brute force, a greedy and a genetic algo that I made from scratch, and one other implemented using the pymoo library (also a genetic algo) to solve this problem and I analyse their limits.
 
 ## Sources
 
